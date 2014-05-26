@@ -1,0 +1,64 @@
+apply plugin: 'java'
+apply plugin: 'maven'
+apply plugin: 'signing'
+
+sourceCompatibility = 1.7
+group = "org.imaginea.jenkins.plugins"
+version = '0.1-SNAPSHOT'
+if (System.properties["release"] == "yes") {
+    version = version.substring(0, version.indexOf("-SNAPSHOT"))
+    print(version)
+}
+isReleaseVersion = !version.endsWith("SNAPSHOT")
+
+repositories {
+    mavenCentral()
+    maven {
+        url "http://repo.jenkins-ci.org/public/"
+    }
+}
+
+dependencies {
+    compile "org.jenkins-ci.plugins:testInProgress-client:1.2"
+    compile "org.spockframework:spock-core:0.7-groovy-2.0"
+}
+
+
+uploadArchives {
+    if (isReleaseVersion) {
+        repositories.mavenDeployer {
+            repository(url: "file://M2_REPO/")
+            pom.project{
+                licenses {
+                    license {
+                        name "The Apache Software License, Version 2.0"
+                        url "http://www.apache.org/licenses/LICENSE-2.0.txt"
+                        distribution "repo"
+                    }
+                }
+
+                scm {
+                    connection "scm:git:git://github.com:menonvarun/testInProgress-spock-client.git"
+                    developerConnection "scm:git:ssh://git@github.com:menonvarun/testInProgress-spock-client.git"
+                    url "https://github.com/menonvarun/testInProgress-spock-client"
+                }
+
+                developers {
+                    developer {
+                        id "menonvarun"
+                        name "Varun Menon"
+                        email "mr.varun.menon@gmail.com"
+                    }
+                }
+            }
+
+        }
+
+    }
+}
+
+signing {
+    required { isReleaseVersion && gradle.taskGraph.hasTask("uploadArchives") }
+    sign configurations.archives
+}
+
