@@ -27,7 +27,9 @@ dependencies {
 uploadArchives {
     if (isReleaseVersion) {
         repositories.mavenDeployer {
-            repository(url: "file://M2_REPO/")
+            repository(url: "http://maven.jenkins-ci.org:8081/content/repositories/releases/"){
+                authentication(userName: jenkins_username, password: jenkins_password)
+            }
             pom.project{
                 licenses {
                     license {
