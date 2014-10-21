@@ -50,7 +50,7 @@ public class SpockTestInProgressExtension extends AbstractRunListener implements
             }catch(Exception e){
                 e.printStackTrace();
             }
-            messageSender.testRunStarted(1000);
+            messageSender.testRunStarted(0);
             String id = addTagAndGetTestId(this.suiteName);
             messageSender.testTree(id, this.suiteName, true, 100);
             this.suiteId = id;
@@ -87,7 +87,7 @@ public class SpockTestInProgressExtension extends AbstractRunListener implements
 
 
         messageSender.testTree(id, name, parentId, parentName, isClass, childrenCount);
-        System.out.println("Test tree sent: "+id+"-"+name+"-"+isClass+"-"+childrenCount);
+        /*System.out.println("Test tree sent: "+id+"-"+name+"-"+isClass+"-"+childrenCount);*/
         if(SpecInfo.class.isAssignableFrom(nodeInfo.getClass())){
             for (FeatureInfo feature : ((SpecInfo)nodeInfo).getFeatures()){
                 sendTestTree(feature);
@@ -126,7 +126,7 @@ public class SpockTestInProgressExtension extends AbstractRunListener implements
             String methodName = ((IterationInfo)nodeInfo).getName();
             key = className+"-"+methodName;
         }
-        System.out.println("Key is:-"+key);
+        /*System.out.println("Key is:-"+key);*/
         String test = testIds.get(key);
         if (test == null) {
             test = Long.toString(atomicLong.incrementAndGet());

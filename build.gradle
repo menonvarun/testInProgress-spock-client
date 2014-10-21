@@ -4,7 +4,7 @@ apply plugin: 'signing'
 
 sourceCompatibility = 1.7
 group = "org.imaginea.jenkins.plugins"
-version = '0.1-SNAPSHOT'
+version = '0.1.1-SNAPSHOT'
 if (System.properties["release"] == "yes") {
     version = version.substring(0, version.indexOf("-SNAPSHOT"))
     print(version)
@@ -19,7 +19,7 @@ repositories {
 }
 
 dependencies {
-    compile "org.jenkins-ci.plugins:testInProgress-client:1.2"
+    compile "org.jenkins-ci.plugins:testInProgress-client:1.3"
     compile "org.spockframework:spock-core:0.7-groovy-2.0"
 }
 
