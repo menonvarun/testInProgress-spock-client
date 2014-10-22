@@ -4,7 +4,7 @@ apply plugin: 'signing'
 
 sourceCompatibility = 1.7
 group = "org.imaginea.jenkins.plugins"
-version = '0.1.1-SNAPSHOT'
+version = '0.1.2-SNAPSHOT'
 if (System.properties["release"] == "yes") {
     version = version.substring(0, version.indexOf("-SNAPSHOT"))
     print(version)

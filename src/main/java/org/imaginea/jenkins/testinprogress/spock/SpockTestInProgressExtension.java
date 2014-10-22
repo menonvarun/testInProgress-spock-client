@@ -34,16 +34,24 @@ public class SpockTestInProgressExtension extends AbstractRunListener implements
     private String suiteName = "Test Suite";
     private boolean iterationFailed = false;
     private String iterationTrace ="";
+    private static boolean pluginEnabled = true;
+
     @Override
     public void visitSpec(SpecInfo specInfo){
-        init();
-        totalTests+=specInfo.getFeatures().size();
-        specInfo.addListener(this);
-        sendTestTree(specInfo);
+        try {
+            pluginEnabled = Boolean.parseBoolean(System.getProperty("testinprogress.enabled", "true"));
+
+            init();
+            totalTests += specInfo.getFeatures().size();
+            specInfo.addListener(this);
+            sendTestTree(specInfo);
+        } catch (Exception e) {
+
+        }
     }
 
     private void init(){
-        if(!initialized){
+        if(!initialized && pluginEnabled){
             messageSender = messageSenderFactory.getMessageSender();
             try{
                 messageSender.init();
@@ -83,6 +91,10 @@ public class SpockTestInProgressExtension extends AbstractRunListener implements
             name = getTestMethodName(nodeInfo);
             parentName = ((IterationInfo)nodeInfo).getParent().getFeatureMethod().getReflection().getDeclaringClass().getName();
             parentId = getTestId(((IterationInfo)nodeInfo).getParent());
+        } else if(MethodInfo.class.isAssignableFrom(nodeInfo.getClass())){
+            name = getTestMethodName(nodeInfo);
+            parentName = ((MethodInfo)nodeInfo).getReflection().getDeclaringClass().getName();
+            parentId = getTestId(((MethodInfo)nodeInfo).getParent());
         }
 
 
@@ -101,12 +113,18 @@ public class SpockTestInProgressExtension extends AbstractRunListener implements
         MethodInfo methodInfo=null;
         if(FeatureInfo.class.isAssignableFrom(nodeInfo.getClass())){
             featureInfo = (FeatureInfo)nodeInfo;
+            methodInfo = featureInfo.getFeatureMethod();
 
         } else if(IterationInfo.class.isAssignableFrom(nodeInfo.getClass())){
             featureInfo = ((IterationInfo)nodeInfo).getParent();
             methodName = ((IterationInfo)nodeInfo).getName();
+            methodInfo = featureInfo.getFeatureMethod();
+
+        } else if(MethodInfo.class.isAssignableFrom(nodeInfo.getClass())){
+            methodInfo = (MethodInfo)nodeInfo;
+            methodName = ((MethodInfo)nodeInfo).getName();
         }
-        methodInfo = featureInfo.getFeatureMethod();
+
         methodName = (methodName.contentEquals("")) ? methodInfo.getName() : methodName;
         String className = methodInfo.getReflection().getDeclaringClass().getName();
         String name = methodName +"("+className+")";
@@ -125,6 +143,10 @@ public class SpockTestInProgressExtension extends AbstractRunListener implements
             String className = ((IterationInfo)nodeInfo).getParent().getFeatureMethod().getReflection().getDeclaringClass().getName();
             String methodName = ((IterationInfo)nodeInfo).getName();
             key = className+"-"+methodName;
+        } else if(MethodInfo.class.isAssignableFrom(nodeInfo.getClass())){
+            String className = ((MethodInfo)nodeInfo).getReflection().getDeclaringClass().getName();
+            String methodName = ((MethodInfo)nodeInfo).getName();
+            key = className+"-"+methodName;
         }
         /*System.out.println("Key is:-"+key);*/
         String test = testIds.get(key);
@@ -142,54 +164,80 @@ public class SpockTestInProgressExtension extends AbstractRunListener implements
     }
 
     public void beforeFeature(FeatureInfo feature) {
-        String name = getTestMethodName(feature);
-        if(!(feature.isParameterized() && feature.isReportIterations())){
-            String id = getTestId(feature);
-            messageSender.testStarted(id, name, false);
+        if (pluginEnabled) {
+            String name = getTestMethodName(feature);
+            if (!(feature.isParameterized() && feature.isReportIterations())) {
+                String id = getTestId(feature);
+                messageSender.testStarted(id, name, false);
+            }
         }
     }
     public void beforeIteration(IterationInfo iteration) {
-        FeatureInfo feature = iteration.getParent();
-        if((feature.isParameterized() && feature.isReportIterations())){
-            String name = getTestMethodName(iteration);
-            String id = getTestId(iteration);
-            String parentId = getTestId(iteration.getParent());
-            String parentName =  getTestMethodName(iteration.getParent());
-            messageSender.testTree(id,name,parentId,parentName,false,1);
-            messageSender.testStarted(id, name, false);
+        if (pluginEnabled) {
+            FeatureInfo feature = iteration.getParent();
+            if ((feature.isParameterized() && feature.isReportIterations())) {
+                String name = getTestMethodName(iteration);
+                String id = getTestId(iteration);
+                String parentId = getTestId(iteration.getParent());
+                String parentName = getTestMethodName(iteration.getParent());
+                messageSender.testTree(id, name, parentId, parentName, false, 1);
+                messageSender.testStarted(id, name, false);
+            }
         }
     }
 
     public void afterIteration(IterationInfo iteration) {
-        FeatureInfo feature = iteration.getParent();
-        String name = getTestMethodName(iteration);
-        String id = getTestId(iteration);
-        if((feature.isParameterized() && feature.isReportIterations())){
-            if(iterationFailed){
-                messageSender.testError(id, name, iterationTrace);
-                iterationFailed = false;
-                iterationTrace = "";
+        if (pluginEnabled) {
+            FeatureInfo feature = iteration.getParent();
+            String name = getTestMethodName(iteration);
+            String id = getTestId(iteration);
+            if ((feature.isParameterized() && feature.isReportIterations())) {
+                if (iterationFailed) {
+                    messageSender.testError(id, name, iterationTrace);
+                    iterationFailed = false;
+                    iterationTrace = "";
+                }
+                messageSender.testEnded(id, name, false);
             }
-            messageSender.testEnded(id, name, false);
         }
     }
 
     public void afterFeature(FeatureInfo feature) {
-        String name = getTestMethodName(feature);
-        String id = getTestId(feature);
-        messageSender.testEnded(id, name, false);
+        if (pluginEnabled) {
+            String name = getTestMethodName(feature);
+            String id = getTestId(feature);
+            messageSender.testEnded(id, name, false);
+        }
     }
 
     public void error(ErrorInfo error) {
-        FeatureInfo feature = error.getMethod().getFeature();
-        String name = getTestMethodName(feature);
-        String id = getTestId(feature);
-        Throwable exception = error.getException();
-        if(feature.isParameterized() && feature.isReportIterations()){
-            iterationFailed = true;
-            iterationTrace = getTrace(exception);
-        } else {
-            messageSender.testError(id, name, getTrace(exception));
+        if (pluginEnabled) {
+            boolean sendError = true;
+            NodeInfo nodeInfo;
+            String trace = getTrace(error.getException());
+            MethodInfo methodInfo = error.getMethod();
+            MethodKind kind = methodInfo.getKind();
+            if (kind.isFixtureMethod()){
+                sendTestTree(methodInfo);
+                nodeInfo = methodInfo;
+                String name = getTestMethodName(nodeInfo);
+                String id = getTestId(nodeInfo);
+                messageSender.testStarted(id, name, false);
+            } else {
+                FeatureInfo feature = error.getMethod().getFeature();
+                nodeInfo = feature;
+                if (feature.isParameterized() && feature.isReportIterations()) {
+                    sendError = false;
+                    iterationFailed = true;
+                    iterationTrace = trace;
+                }
+            }
+            String name = getTestMethodName(nodeInfo);
+            String id = getTestId(nodeInfo);
+
+             if (sendError) {
+                messageSender.testError(id, name, trace);
+            }
         }
     }
 
@@ -204,18 +252,22 @@ public class SpockTestInProgressExtension extends AbstractRunListener implements
 
 
     public void specSkipped(SpecInfo spec) {
-        init();
+        if (pluginEnabled) {
+            init();
 
-        for (FeatureInfo feature : spec.getFeatures()){
-            featureSkipped(feature);
+            for (FeatureInfo feature : spec.getFeatures()) {
+                featureSkipped(feature);
+            }
         }
     }
 
     public void featureSkipped(FeatureInfo feature) {
-        String name = getTestMethodName(feature);
-        String id = getTestId(feature);
-        messageSender.testStarted(id, name, true);
-        messageSender.testEnded(id, name, true);
+        if (pluginEnabled) {
+            String name = getTestMethodName(feature);
+            String id = getTestId(feature);
+            messageSender.testStarted(id, name, true);
+            messageSender.testEnded(id, name, true);
+        }
     }
 }
 
